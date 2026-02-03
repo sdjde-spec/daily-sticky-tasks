@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Sticky Tasks</title>
+    <style>
+        /* 
+         * Daily Sticky Tasks - Compiled Styles V2.1
+         */
+        :root {
+            --color-bg-app: #f4f7f6;
+            --color-bg-sidebar: #f0f2f5;
+            --color-bg-main: #ffffff;
+            --color-text-primary: #333333;
+            --color-text-secondary: #777777;
+            --color-sticky-bg: #fff7d1;
+            --color-sticky-shadow: rgba(0, 0, 0, 0.1);
+            --color-border: #dddddd;
+            --color-danger: #ff6b6b;
+            --color-modal-overlay: rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            color: var(--color-text-primary);
+            background-color: var(--color-bg-app);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Sidebar */
+        .app-container__sidebar {
+            width: 300px;
+            background-color: var(--color-bg-sidebar);
+            border-right: 1px solid var(--color-border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .app-container__sidebar h2 {
+            font-size: 1.2rem;
+            color: var(--color-text-secondary);
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--color-border);
+            padding-bottom: 10px;
+        }
+
+        /* Main Area */
+        .app-container__main {
+            flex-grow: 1;
+            background-color: var(--color-bg-main);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: hidden;
+            position: relative;
+        }
+
+        .app-container__main header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .app-container__main h1 {
+            font-size: 1.8rem;
+            margin: 0;
+        }
+
+        /* Controls */
+        .btn-add-sticky {
+            background-color: var(--color-text-primary);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .btn-add-sticky:hover {
+            opacity: 0.8;
+        }
+
+        /* Sticky List */
+        .sticky-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 20px;
+            overflow-y: auto;
+            padding: 10px;
+            height: 100%;
+        }
+
+        /* Sticky Note V2 */
+        .sticky-note {
+            background-color: var(--color-sticky-bg);
+            width: 260px;
+            min-height: 200px;
+            height: auto;
+            padding: 15px;
+            position: relative;
+            box-shadow: 2px 2px 5px var(--color-sticky-shadow);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s;
+            border-radius: 2px;
+        }
+
+        /* Revised Hover: No transform to avoid flicker with popups */
+        .sticky-note:hover {
+            box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.15);
+            z-index: 5;
+        }
+
+        .sticky-note__header {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
+        .sticky-note__delete {
+            background: none;
+            border: none;
+            color: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+        }
+
+        .sticky-note__delete:hover {
+            color: rgba(0, 0, 0, 0.5);
+        }
+
+        .sticky-note__list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+            flex-grow: 1;
+        }
+
+        /* Task Item */
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            cursor: pointer;
+            line-height: 1.4;
+            font-size: 1rem;
+            word-break: break-all;
+        }
+
+        .task-item::before {
+            content: '•';
+            margin-right: 8px;
+            color: #555;
+            flex-shrink: 0;
+        }
+
+        .task-item--completed {
+            color: #888;
+            text-decoration: line-through;
+        }
+
+        /* Input inside Sticky */
+        .sticky-input {
+            border: none;
+            background: rgba(255, 255, 255, 0.4);
+            width: 100%;
+            padding: 8px;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            outline: none;
+            border-bottom: 1px solid transparent;
+        }
+
+        .sticky-input:focus {
+            background: rgba(255, 255, 255, 0.8);
+            border-bottom-color: #aaa;
+        }
+
+        .sticky-input::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+            font-size: 0.85rem;
+        }
+
+        /* Queue: Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--color-modal-overlay);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .modal-actions button {
+            padding: 8px 20px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #f0f0f0;
+            font-size: 0.9rem;
+        }
+
+        .modal-actions button:hover {
+            opacity: 0.8;
+        }
+
+        .modal-actions button.btn-danger {
+            background-color: var(--color-danger);
+            color: white;
+            border-color: #e65b5b;
+        }
+
+        /* History */
+        .history-group {
+            margin-bottom: 30px;
+        }
+
+        .history-group__date {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--color-text-secondary);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .history-group__list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .history-item {
+            background-color: #fff;
+            border-left: 4px solid #ccc;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #bbb;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar / History -->
+        <div class="app-container__sidebar" id="sidebar">
+            <h2>過去の履歴</h2>
+            <div id="history-container">
+                <!-- Examples -->
+            </div>
+        </div>
+
+        <!-- Main -->
+        <div class="app-container__main">
+            <header>
+                <h1>今日のタスク <span id="current-date-display"
+                        style="font-size:1rem; font-weight:normal; color:#777;"></span></h1>
+                <button id="btn-add-sticky" class="btn-add-sticky">＋ 付箋を追加</button>
+            </header>
+
+            <div id="sticky-container" class="sticky-container">
+                <!-- Stickies go here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal for Delete Confirmation -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-content">
+            <p>この付箋を削除してもよろしいですか？</p>
+            <div class="modal-actions">
+                <button id="modal-cancel">キャンセル</button>
+                <button id="modal-confirm" class="btn-danger">削除する</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Daily Sticky Tasks V2 - Application Logic
+         */
+        const STORAGE_KEY = 'daily_sticky_tasks_data';
+
+        let appState = {
+            lastDate: '',
+            stickies: [],
+            history: []
+        };
+
+        let pendingDeleteIndex = null; // Store index for modal action
+
+        window.onload = () => {
+            loadData();
+            checkAndHandleDateChange();
+
+            if (appState.stickies.length === 0) {
+                addNewSticky();
+            }
+
+            renderAll();
+            setupEventListeners();
+        };
+
+        function loadData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    appState = { ...appState, ...parsed };
+
+                    if (appState.currentTasks && Array.isArray(appState.currentTasks) && appState.currentTasks.length > 0) {
+                        const migratedSticky = {
+                            id: Date.now(),
+                            tasks: appState.currentTasks
+                        };
+                        appState.stickies.push(migratedSticky);
+                        delete appState.currentTasks;
+                        saveData();
+                    }
+
+                    if (!appState.stickies) appState.stickies = [];
+                } catch (e) {
+                    console.error("Failed to parse data", e);
+                }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        }
+
+        function getTodayString() {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = ('0' + (d.getMonth() + 1)).slice(-2);
+            const day = ('0' + d.getDate()).slice(-2);
+            return `${year}-${month}-${day}`;
+        }
+
+        function checkAndHandleDateChange() {
+            const todayStr = getTodayString();
+            const lastDate = appState.lastDate;
+
+            document.getElementById('current-date-display').textContent = todayStr;
+
+            if (!lastDate) {
+                appState.lastDate = todayStr;
+                saveData();
+                return;
+            }
+
+            if (lastDate !== todayStr) {
+                let allTasksForDay = [];
+                appState.stickies.forEach(sticky => {
+                    if (sticky.tasks && sticky.tasks.length > 0) {
+                        allTasksForDay = allTasksForDay.concat(sticky.tasks);
+                    }
+                });
+
+                if (allTasksForDay.length > 0) {
+                    const archivedEntry = {
+                        date: lastDate,
+                        tasks: allTasksForDay
+                    };
+                    appState.history.unshift(archivedEntry);
+                }
+
+                appState.stickies = [];
+                appState.lastDate = todayStr;
+                saveData();
+            }
+        }
+
+        /* --- Rendering --- */
+
+        function renderAll() {
+            renderStickies();
+            renderHistory();
+        }
+
+        function renderStickies() {
+            const container = document.getElementById('sticky-container');
+            container.innerHTML = '';
+
+            appState.stickies.forEach((sticky, stickyIndex) => {
+                const stickyEl = document.createElement('div');
+                stickyEl.className = 'sticky-note';
+
+                const header = document.createElement('div');
+                header.className = 'sticky-note__header';
+                const delBtn = document.createElement('button');
+                delBtn.className = 'sticky-note__delete';
+                delBtn.innerHTML = '×';
+                delBtn.title = '付箋を削除';
+                delBtn.onclick = (e) => requestDeleteSticky(stickyIndex, e);
+                header.appendChild(delBtn);
+                stickyEl.appendChild(header);
+
+                const list = document.createElement('ul');
+                list.className = 'sticky-note__list';
+
+                if (sticky.tasks) {
+                    sticky.tasks.forEach((task, taskIndex) => {
+                        const item = document.createElement('li');
+                        item.className = 'task-item';
+                        if (task.completed) {
+                            item.classList.add('task-item--completed');
+                        }
+                        item.textContent = task.text;
+                        item.onclick = () => toggleTask(stickyIndex, taskIndex);
+                        list.appendChild(item);
+                    });
+                }
+                stickyEl.appendChild(list);
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'sticky-input';
+                input.placeholder = 'タスクを入力...';
+                input.onkeypress = (e) => {
+                    if (e.key === 'Enter') {
+                        addTaskToSticky(stickyIndex, input.value);
+                        input.value = '';
+                    }
+                };
+                stickyEl.appendChild(input);
+
+                container.appendChild(stickyEl);
+            });
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+
+            if (appState.history.length === 0) {
+                container.innerHTML = '<p style="color:#aaa; font-size:0.9rem;">履歴はありません。</p>';
+                return;
+            }
+
+            appState.history.forEach(entry => {
+                const group = document.createElement('div');
+                group.className = 'history-group';
+
+                const dateLabel = document.createElement('span');
+                dateLabel.className = 'history-group__date';
+                dateLabel.textContent = entry.date;
+                group.appendChild(dateLabel);
+
+                const list = document.createElement('div');
+
+                entry.tasks.forEach(task => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    if (task.completed) {
+                        item.classList.add('history-item--completed');
+                    }
+                    item.textContent = task.text;
+                    list.appendChild(item);
+                });
+
+                group.appendChild(list);
+                container.appendChild(group);
+            });
+        }
+
+        /* --- Actions --- */
+
+        function setupEventListeners() {
+            document.getElementById('btn-add-sticky').onclick = addNewSticky;
+
+            // Modal Listeners
+            document.getElementById('modal-cancel').onclick = closeModal;
+            document.getElementById('modal-confirm').onclick = confirmDelete;
+        }
+
+        function addNewSticky() {
+            const newSticky = {
+                id: Date.now(),
+                tasks: []
+            };
+            appState.stickies.push(newSticky);
+            saveData();
+            renderStickies();
+        }
+
+        // New Logic: Request -> UI Modal -> Confirm
+        function requestDeleteSticky(index, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            pendingDeleteIndex = index;
+            document.getElementById('delete-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('delete-modal').classList.remove('active');
+            pendingDeleteIndex = null;
+        }
+
+        function confirmDelete() {
+            if (pendingDeleteIndex !== null) {
+                appState.stickies.splice(pendingDeleteIndex, 1);
+                saveData();
+                renderStickies();
+            }
+            closeModal();
+        }
+
+        function addTaskToSticky(stickyIndex, text) {
+            if (!text.trim()) return;
+            const newTask = {
+                id: Date.now(),
+                text: text,
+                completed: false
+            };
+            appState.stickies[stickyIndex].tasks.push(newTask);
+            saveData();
+            renderStickies();
+        }
+
+        function toggleTask(stickyIndex, taskIndex) {
+            const task = appState.stickies[stickyIndex].tasks[taskIndex];
+            task.completed = !task.completed;
+            saveData();
+            renderStickies();
+        }
+
+    </script>
+</body>
+
+</html>
